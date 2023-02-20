@@ -9,23 +9,27 @@ import Swift
 import UIKit
 import _Concurrency
 import _StringProcessing
-public struct Memory {
+public struct Schedule {
   public let title: Swift.String
-  public let index: Swift.Int
-  public let uploadDate: Foundation.Date
-  public init(title: Swift.String, index: Swift.Int, uploadDate: Foundation.Date)
+  public let description: Swift.String
+  public let coordinate: CoreLocation.CLLocationCoordinate2D
+  public let fromDate: Foundation.Date?
+  public let toDate: Foundation.Date?
+  public init(title: Swift.String, description: Swift.String, coordinate: CoreLocation.CLLocationCoordinate2D, fromDate: Foundation.Date?, toDate: Foundation.Date?)
 }
-public protocol MemoryImageUseCaseProvider : AnyObject {
-  func provideMemoryImageUploadUseCase() -> Domain.MemoryImageUploadUseCase
-  func provideMemoryImageReadUseCase() -> Domain.MemoryImageReadUseCase
-  func provideMemoryImageDeleteUseCase() -> Domain.MemoryImageDeleteUseCase
+extension Domain.Schedule : Swift.Equatable {
+  public static func == (lhs: Domain.Schedule, rhs: Domain.Schedule) -> Swift.Bool
 }
-final public class ConcreteMemoryImageUseCaseProvider<Repository> : Domain.MemoryImageUseCaseProvider where Repository : Domain.AbstractImageRepository {
-  public init(_ repository: Repository)
-  final public func provideMemoryImageUploadUseCase() -> Domain.MemoryImageUploadUseCase
-  final public func provideMemoryImageReadUseCase() -> Domain.MemoryImageReadUseCase
-  final public func provideMemoryImageDeleteUseCase() -> Domain.MemoryImageDeleteUseCase
-  @objc deinit
+public protocol AbstractTravelPlanRepository {
+  #if compiler(>=5.3) && $AsyncAwait
+  func upload(at index: Swift.Int, entity: Domain.TravelPlan) async throws
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  func read() async throws -> [Domain.TravelPlan]
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  func delete(at index: Swift.Int) async throws
+  #endif
 }
 public struct TravelPlanSwapBox {
   public let source: Swift.Int
@@ -42,6 +46,17 @@ public protocol TravelPlanSwapUseCase {
 public protocol MemoryImageDeleteUseCase {
   #if compiler(>=5.3) && $AsyncAwait
   func execute(at index: Swift.Int) async throws
+  #endif
+}
+public protocol AbstractMemoryRepository {
+  #if compiler(>=5.3) && $AsyncAwait
+  func upload(at index: Swift.Int, entity: Domain.Memory) async throws
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  func read() async throws -> [Domain.Memory]
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  func delete(at index: Swift.Int) async throws
   #endif
 }
 public protocol MemoryImageUploadUseCase {
@@ -69,8 +84,8 @@ public protocol MemoryUseCaseProvider {
   func provideMemoryReadUseCase() -> Domain.MemoryReadUseCase
   func provideMemoryDeleteUseCase() -> Domain.MemoryDeleteUseCase
 }
-public struct ConcreteMemoryUseCaseProvider<Repository> : Domain.MemoryUseCaseProvider where Repository : Domain.AbstractRepository, Repository.T == Domain.Memory {
-  public init(_ repository: Repository)
+public struct ConcreteMemoryUseCaseProvider : Domain.MemoryUseCaseProvider {
+  public init(_ repository: Domain.AbstractMemoryRepository)
   public func provideMemoryUploadUseCase() -> Domain.MemoryUploadUseCase
   public func provideMemoryReadUseCase() -> Domain.MemoryReadUseCase
   public func provideMemoryDeleteUseCase() -> Domain.MemoryDeleteUseCase
@@ -83,18 +98,6 @@ public protocol MemoryReadUseCase {
   func execute() async throws -> [Domain.Memory]
   #endif
 }
-public protocol AbstractRepository {
-  associatedtype T
-  #if compiler(>=5.3) && $AsyncAwait
-  func upload(at index: Swift.Int, entity: Self.T) async throws
-  #endif
-  #if compiler(>=5.3) && $AsyncAwait
-  func read() async throws -> [Self.T]
-  #endif
-  #if compiler(>=5.3) && $AsyncAwait
-  func delete(at index: Swift.Int) async throws
-  #endif
-}
 public struct TravelPlan {
   public let title: Swift.String
   public let description: Swift.String
@@ -104,29 +107,36 @@ public struct TravelPlan {
 extension Domain.TravelPlan : Swift.Equatable {
   public static func == (lhs: Domain.TravelPlan, rhs: Domain.TravelPlan) -> Swift.Bool
 }
+public protocol MemoryImageUseCaseProvider : AnyObject {
+  func provideMemoryImageUploadUseCase() -> Domain.MemoryImageUploadUseCase
+  func provideMemoryImageReadUseCase() -> Domain.MemoryImageReadUseCase
+  func provideMemoryImageDeleteUseCase() -> Domain.MemoryImageDeleteUseCase
+}
+final public class ConcreteMemoryImageUseCaseProvider : Domain.MemoryImageUseCaseProvider {
+  public init(_ repository: Domain.AbstractImageRepository)
+  final public func provideMemoryImageUploadUseCase() -> Domain.MemoryImageUploadUseCase
+  final public func provideMemoryImageReadUseCase() -> Domain.MemoryImageReadUseCase
+  final public func provideMemoryImageDeleteUseCase() -> Domain.MemoryImageDeleteUseCase
+  @objc deinit
+}
+public struct Memory {
+  public let title: Swift.String
+  public let index: Swift.Int
+  public let uploadDate: Foundation.Date
+  public init(title: Swift.String, index: Swift.Int, uploadDate: Foundation.Date)
+}
 public protocol TravelPlanUseCaseProvider {
   func provideTravelPlanUploadUseCase() -> Domain.TravelPlanUploadUseCase
   func provideTravelPlanReadUseCase() -> Domain.TravelPlanReadUseCase
   func provideTravelPlanDeleteUseCase() -> Domain.TravelPlanDeleteUseCase
   func provideTravelPlanSwapUseCase() -> Domain.TravelPlanSwapUseCase
 }
-public struct ConcreteTravelPlanUseCaseProvider<Repository> : Domain.TravelPlanUseCaseProvider where Repository : Domain.AbstractRepository, Repository.T == Domain.TravelPlan {
-  public init(_ repository: Repository)
+public struct ConcreteTravelPlanUseCaseProvider : Domain.TravelPlanUseCaseProvider {
+  public init(_ repository: Domain.AbstractTravelPlanRepository)
   public func provideTravelPlanUploadUseCase() -> Domain.TravelPlanUploadUseCase
   public func provideTravelPlanReadUseCase() -> Domain.TravelPlanReadUseCase
   public func provideTravelPlanDeleteUseCase() -> Domain.TravelPlanDeleteUseCase
   public func provideTravelPlanSwapUseCase() -> Domain.TravelPlanSwapUseCase
-}
-public struct Schedule {
-  public let title: Swift.String
-  public let description: Swift.String
-  public let coordinate: CoreLocation.CLLocationCoordinate2D
-  public let fromDate: Foundation.Date?
-  public let toDate: Foundation.Date?
-  public init(title: Swift.String, description: Swift.String, coordinate: CoreLocation.CLLocationCoordinate2D, fromDate: Foundation.Date?, toDate: Foundation.Date?)
-}
-extension Domain.Schedule : Swift.Equatable {
-  public static func == (lhs: Domain.Schedule, rhs: Domain.Schedule) -> Swift.Bool
 }
 public protocol TravelPlanDeleteUseCase {
   #if compiler(>=5.3) && $AsyncAwait
